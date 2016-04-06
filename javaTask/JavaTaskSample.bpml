@@ -1,0 +1,132 @@
+<!-- 
+ (c) Copyright IBM Corp. 2012  All rights reserved.                        
+                                                                           
+ This sample program is owned by International Business Machines           
+ Corporation or one of its subsidiaries ("IBM") and is copyrighted         
+ and licensed, not sold.                                                   
+                                                                           
+ You may copy, modify, and distribute this sample program in any           
+ form without payment to IBM,  for any purpose including developing,       
+ using, marketing or distributing programs that include or are             
+ derivative works of the sample program.                                   
+                                                                           
+ The sample program is provided to you on an "AS IS" basis, without        
+ warranty of any kind.  IBM HEREBY  EXPRESSLY DISCLAIMS ALL WARRANTIES,    
+ EITHER EXPRESS OR IMPLIED, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED     
+ WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.       
+ Some jurisdictions do not allow for the exclusion or limitation of        
+ implied warranties, so the above limitations or exclusions may not        
+ apply to you.  IBM shall not be liable for any damages you suffer as      
+ a result of using, modifying or distributing the sample program or        
+ its derivatives.                                                                                                                
+-->
+
+
+<process name="JavaTaskSample">
+<sequence>
+<!-- 
+This sample BP will assign a few values to Process Data. 
+In a second step the Java Task Service is used to work with these values 
+
+-->
+
+<assign to="InputNumberValueOne">5</assign>
+<assign to="InputNumberValueTwo">13</assign>
+
+<assign to="InputStringValueOne">TextOne</assign>
+<assign to="InputStringValueTwo">TextTwo</assign>
+
+<assign to="nodeOne/ElementOne">ValueOne</assign>
+<assign to="nodeOne/ElementTwo">ValueTwo</assign>
+
+<!--
+The Java Task Service will now:
+- use Random to create a Random Number and write 
+  it to a Process Data Value
+- read 2 Numbers from Process Data, multiply them 
+  and write the result back to Process Data
+- read 2 Strings from Process Data, concat them and 
+  apply toUpperCase before writing the result back 
+  to Process Data
+- read a XML Node from PD count the number of Elements
+- read value of 2nd Node Element and write to ProcessData
+- add a third Text Element to the Node
+- access the Primary Document as Stream and count the bytes
+  write the size of the document and the body name to Process Data
+  #### this is only for demonstration, will take forever with large files ####
+- create a new Primary Document and write to Process Data
+- return "OK" to the Workflow eninge to say 
+  that the operation was OK.
+-->
+<operation name="RandomMapTest">
+	<participant name="JavaTask"/>
+	<output message="Xout" >
+	<assign to="srcLocationMode">inline</assign>
+	<assign to="javaSrc">import java.util.Random;import org.w3c.dom.Node;import org.w3c.dom.NodeList;import org.w3c.dom.Element;
+	import java.io.InputStream;
+	import java.io.OutputStream;
+	import com.sterlingcommerce.woodstock.workflow.Document;
+	Random randomGenerator = new Random();
+	int randomInt = randomGenerator.nextInt(6)+1;
+	String s = Integer.toString(randomInt);
+	wfc.addWFContent("Random",s); 
+	
+	String numberOne = (String)wfc.getWFContent("InputNumberValueOne");
+	String numberTwo = (String)wfc.getWFContent("InputNumberValueTwo");
+	int firstNumber = Integer.parseInt(numberOne);
+	int secondNumber = Integer.parseInt(numberTwo);
+	int product = firstNumber * secondNumber;
+	String productAsString = Integer.toString(product);
+	wfc.addWFContent("ProductOfMultiplication",productAsString); 
+	
+	String stringOne = (String)wfc.getWFContent("InputStringValueOne");
+	String stringTwo = (String)wfc.getWFContent("InputStringValueTwo");
+	String resultString = stringOne.concat(stringTwo).toUpperCase();
+	wfc.addWFContent("ResultOfConcat",resultString); 
+	
+	Node node = (Node) wfc.getWFContent("nodeOne");
+	NodeList nl = node.getChildNodes();
+	int children = nl.getLength();
+	String childrenAsString = Integer.toString(children);
+	wfc.addWFContent("NumberOfChildren",childrenAsString); 
+	
+	Node childOne = nl.item(1).getFirstChild();
+	String lookupElementValue = childOne.getNodeValue();
+	wfc.addWFContent("ValueOfChild", lookupElementValue); 
+	
+	Element newElement = node.getOwnerDocument().createElement("ElementThree");
+	newElement.setTextContent("ValueThree");
+	node.appendChild(newElement);
+		
+	Document doc = wfc.getPrimaryDocument();
+    if(doc != null){
+        String bodyName = doc.getBodyName();
+        InputStream is = doc.getBodyInputStream();
+        int numberOfBytesRead=0;
+        while(is.read() != -1) {
+          numberOfBytesRead++;
+        }
+        is.close();
+        String bytesReadAsString = Integer.toString(numberOfBytesRead);
+        wfc.addWFContent("DocumentSize",bytesReadAsString); 
+        wfc.addWFContent("DocumentName",bodyName); 
+        
+        String newContent = "This is the content of the new Primary Document";
+        Document newDocument = new Document();
+        OutputStream os = newDocument.getOutputStream();
+        os.write(newContent.getBytes());
+        os.flush();
+        os.close();
+        wfc.putPrimaryDocument(newDocument);
+	}
+	
+	return "OK";</assign>
+	<assign to="." from="*"></assign>
+	</output>
+	<input message="Xin" >
+	<assign to="." from="*"></assign>
+	</input>
+</operation>
+</sequence>
+</process>
+ 
